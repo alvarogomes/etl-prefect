@@ -30,8 +30,8 @@ services:
     ports:
       - 4200:4200
     volumes:
-      - ./pre-init.sh:/pre-init.sh
-      - ./init.sh:/init.sh
+      - ./scripts/deploy.sh:/deploy.sh
+      - ./scripts/init.sh:/init.sh
       - ./etl.py:/etl/etl.py  # Montagem do script ETL
     environment:
       PREFECT__SERVER__DATABASE__CONN_URL: postgresql://postgres:mysecretpassword@prefect-db:5432
@@ -42,4 +42,4 @@ services:
     depends_on:
       - prefect-db
     command: >
-        bash -c "(/pre-init.sh &) && /init.sh"
+        bash -c "(/deploy.sh &) && /init.sh"

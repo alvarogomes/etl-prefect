@@ -34,12 +34,6 @@ O projeto utiliza a funcionalidade de `Secrets` do Prefect para armazenar URLs d
 - `SOURCE_DB_URL`: para o banco de dados MySQL (por exemplo, `mysql+pymysql://root:rootpassword@localhost:3306/source_db`)
 - `TARGET_DB_URL`: para o banco de dados PostgreSQL (por exemplo, `postgresql://target_user:mysecretpassword@localhost:5432/target_db`)
 
-Você pode utilizar a CLI do Prefect para criar esses secrets:
-
-```bash
-prefect secret set SOURCE_DB_URL "mysql+pymysql://root:rootpassword@localhost:3306/source_db"
-prefect secret set TARGET_DB_URL "postgresql://target_user:mysecretpassword@localhost:5432/target_db"
-```
 
 ### Passo 4: Executar o ETL
 
@@ -66,7 +60,14 @@ docker-compose up
 O código é dividido em duas tarefas principais:
 
 1. **Extract Task**: Esta tarefa se conecta ao banco de dados MySQL e extrai todos os dados de tabelas que não são tabelas de sistema.
-2. **Load Task**: Esta tarefa faz o seguinte:
+
+2. **Transform Task**: Transforma o esquema e os dados para serem compatíveis com o PostgreSQL. As seguintes transformações são aplicadas:
+
+BINARY(n) para BYTEA
+
+Obs: Outros tipos podem ser alterados.
+
+3. **Load Task**: Esta tarefa faz o seguinte:
     - Cria uma tabela `etl_history_log` para manter o controle dos registros já transferidos.
     - Verifica a última entrada transferida de cada tabela.
     - Transfere novos registros para o PostgreSQL.

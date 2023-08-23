@@ -1,9 +1,15 @@
 from prefect import task, flow
 from prefect.blocks.system import Secret
-from sqlalchemy import create_engine, MetaData, Table, Column, String, DateTime, Integer
+from sqlalchemy import (
+    create_engine, MetaData, Table, Column, DateTime, String, Integer, Numeric,
+    SMALLINT, Text
+)
+from sqlalchemy.dialects.postgresql import BYTEA
+
 import hashlib
 import json
 from datetime import datetime
+
 
 @task(name="Extract Task", description="Makes request.")
 def extract():
@@ -24,6 +30,24 @@ def extract():
             "schema": table_ref,
             "data": source_engine.execute(f"SELECT * FROM {table_name}").fetchall()
         }
+
+    return data
+
+
+@task(name="Transform Task", description="Transform MySQL schema to Postgres schema")
+def transform(data):
+    for table, table_data in data.items():
+        schema = table_data['schema']
+        
+        # Transform the schema columns from MySQL specific types to Postgres compatible types
+        for column in schema.columns:
+            column_type_str = str(column.type).upper()
+
+            if 'BINARY' in column_type_str:
+                column.type = BYTEA()
+
+        # Store the transformed schema back into the data dictionary
+        data[table]['schema'] = schema
 
     return data
 
@@ -89,8 +113,10 @@ def load(data):
 
 @flow(name="ETL Flow")
 def etl_flow():
-    data = extract()
-    load(data)
+    extracted_data = extract()
+    transformed_data = transform(extracted_data)
+    load(transformed_data)
+
 
 if __name__ == "__main__":
     etl_flow()
