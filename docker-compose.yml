@@ -1,0 +1,45 @@
+version: '3'
+services:
+  source-db:
+    image: mysql:5.7
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: source_db
+    ports:
+      - "3306:3306"
+
+  target-db:
+    image: postgres
+    environment:
+      POSTGRES_PASSWORD: mysecretpassword
+      POSTGRES_USER: target_user
+      POSTGRES_DB: target_db
+    ports:
+      - "5432:5432"
+
+  prefect-db:
+    image: postgres
+    environment:
+      POSTGRES_PASSWORD: mysecretpassword
+      POSTGRES_USER: prefect_user
+    ports:
+      - "5433:5432"
+  
+  prefect-server:
+    build: .
+    ports:
+      - 4200:4200
+    volumes:
+      - ./pre-init.sh:/pre-init.sh
+      - ./init.sh:/init.sh
+      - ./etl.py:/etl/etl.py  # Montagem do script ETL
+    environment:
+      PREFECT__SERVER__DATABASE__CONN_URL: postgresql://postgres:mysecretpassword@prefect-db:5432
+      PREFECT_ORION_API_HOST: 0.0.0.0
+      PREFECT__LOGGING__LEVEL: "DEBUG"
+      PREFEC_SECRETS_SOURCE_DB_URL: "mysql+pymysql://root:rootpassword@source-db:3306/source_db"
+      PREFEC_SECRETS_TARGET_DB_URL: "postgresql://target_user:mysecretpassword@target-db:5432/target_db"
+    depends_on:
+      - prefect-db
+    command: >
+        bash -c "(/pre-init.sh &) && /init.sh"
